@@ -37,16 +37,21 @@ app.get('/search/:name', function(inReq, inRes){
 
 app.get('/related/:name', function(inReq, inRes){
     var searchArtist, searchRelated;
+    var params = {q:inReq.params.name, limit:1, type:'artist'}
     
-    searchArtist = getFromApi('search', {q:inReq.params.name, linit:1, type:'artist'});
+    searchArtist = getFromApi('search', params);
     searchArtist.on('end', function(inData){
-
 
         if(inData.artists.items.length > 0){
             
             searchRelated = getFromApi('artists/' + inData.artists.items[0].id + '/related-artists');
-            searchRelated.on('end', function(inData){inRes.json(inData);});
-            searchRelated.on('error', function(incode){inRes.sendStatus(inCode);});
+            searchRelated.on('end', function(inRelated){
+                inData.artists.items[0].related = inRelated.artists;
+                inRes.json(inData.artists.items[0]);
+            });
+            searchRelated.on('error', function(incode){
+                inRes.sendStatus(inCode);
+            });
         }
         else{
            inRes.json("nothing found"); 

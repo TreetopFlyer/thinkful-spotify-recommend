@@ -120,15 +120,6 @@ Spotify.prototype.onSearchSubmitted = function(event) {
     this.searchButton.trigger('click');
 };
 
-/*
-Spotify.prototype.search = function(name) {
-    var ajax = $.ajax('/search/' + name, {
-        type: 'GET',
-        dataType: 'json'
-    });
-    ajax.done(this.onSearchDone.bind(this));
-};
-*/
 Spotify.prototype.search = function(name) {
     var ajax = $.ajax('/related/' + name, {
         type: 'GET',
@@ -138,17 +129,10 @@ Spotify.prototype.search = function(name) {
 };
 
 Spotify.prototype.onSearchDone = function(artist) {
-    var JQResult;
-    var HBTemplate = this.artistTemplate;
-    
-    JQResult = this.result;
-    JQResult.empty();
-    artist.artists.forEach(function(inItem, inIndex, inArray){
-        JQResult.append( $(HBTemplate(inItem)) );
-    });
-    JQResult.toggleClass('transparent');
+    var result = $(this.artistTemplate(artist));
+    this.result.empty().append(result);
+    this.result.toggleClass('transparent');
 };
-
 
 
 $(document).ready(function() {
