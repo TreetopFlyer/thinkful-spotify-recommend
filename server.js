@@ -20,48 +20,31 @@ var getFromApi = function(endpoint, args) {
 var app = express();
 
 app.use('/', express.static(__dirname+'/public'));
+
 app.get('/search/:name', function(inReq, inRes){
-    
-    var search;
-    search = getFromApi('search', {q:inReq.params.name, linit:1, type:'artist'});
-    
-    search.on('end', function(inItem){
-        inRes.json(inItem.artists.items[0]);
-    });
-    
-    search.on('error', function(inCode){
-        inRes.sendStatus(inCode);
-    })
-    
-});
-
-app.get('/related/:name', function(inReq, inRes){
     var searchArtist, searchRelated;
-    var params = {q:inReq.params.name, limit:1, type:'artist'}
+    var artist;
     
-    searchArtist = getFromApi('search', params);
+    searchArtist = getFromApi('search', {q:inReq.params.name, limit:1, type:'artist'});
     searchArtist.on('end', function(inData){
-
         if(inData.artists.items.length > 0){
-            
-            searchRelated = getFromApi('artists/' + inData.artists.items[0].id + '/related-artists');
+            artist = inData.artists.items[0];
+            searchRelated = getFromApi('artists/' + artist.id + '/related-artists');
             searchRelated.on('end', function(inRelated){
-                inData.artists.items[0].related = inRelated.artists;
-                inRes.json(inData.artists.items[0]);
+                artist.related = inRelated.artists;
+                inRes.json(artist);
             });
             searchRelated.on('error', function(incode){
                 inRes.sendStatus(inCode);
             });
         }
         else{
-           inRes.json("nothing found"); 
+           inRes.json({name:'nothing found for \"'+inReq.params.name+'\"'}); 
         }
     });
-    
     searchArtist.on('error', function(inCode){
         inRes.sendStatus(inCode);
-    })
-    
+    });
 });
 
 

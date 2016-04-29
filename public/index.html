@@ -121,7 +121,7 @@ Spotify.prototype.onSearchSubmitted = function(event) {
 };
 
 Spotify.prototype.search = function(name) {
-    var ajax = $.ajax('/related/' + name, {
+    var ajax = $.ajax('/search/' + name, {
         type: 'GET',
         dataType: 'json'
     });
