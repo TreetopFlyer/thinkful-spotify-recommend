@@ -17,12 +17,53 @@ var getFromApi = function(endpoint, args) {
     return emitter;
 };
 
+var getFromApiBatch = function(inURLs){
+    var emitter = new events.EventEmitter();
+    var i;
+    var done = 0;
+    var output = [];
+    
+    function collect(inIndex, inData){
+        output[inIndex] = inData;
+        
+        done++;
+        if(done == inURLs.length){
+            emitter.emit('end', output);
+        }
+    }
+    
+    for(i=0; i<inURLs.length; i++){
+        
+        var request = getFromApi(inURLs[i]);
+        request._index = i;
+        request.on('end', function(inData){
+            collect(this._index, inData);
+        });
+        request.on('error', function(inCode){
+            collect(this._index, {error:inCode});
+        });
+    }
+    
+    return emitter;
+};
+
+urls = [];
+urls.push("artists/6DCIj8jNaNpBz8e5oKFPtp/top-tracks?country=US");
+urls.push("artists/7lzordPuZEXxwt9aoVZYmG/top-tracks?country=US");
+urls.push("artists/0f3EsoviYnRKTkmayI3cux/top-tracks?country=US");
+urls.push("artists/1dfeR4HaWDbWqFHLkxsg1d/top-tracks?country=US");
+urls.push("artists/0WwSkZ7LtFUFjGjMZBMt6T/top-tracks?country=US");
+var batch = getFromApiBatch(urls);
+batch.on('end', function(inArray){
+    console.log(inArray);
+})
+
 var app = express();
 
 app.use('/', express.static(__dirname+'/public'));
 
 app.get('/search/:name', function(inReq, inRes){
-    var searchArtist, searchRelated;
+    var searchArtist, searchRelated, searchTracks;
     var artist;
     
     searchArtist = getFromApi('search', {q:inReq.params.name, limit:1, type:'artist'});
@@ -31,8 +72,19 @@ app.get('/search/:name', function(inReq, inRes){
             artist = inData.artists.items[0];
             searchRelated = getFromApi('artists/' + artist.id + '/related-artists');
             searchRelated.on('end', function(inRelated){
-                artist.related = inRelated.artists;
-                inRes.json(artist);
+                var i;
+                var tracks;
+                var batch;
+
+                tracks = [];
+                for(i=0; i<inRelated.artists.length; i++){
+                    tracks[i] = 'artists/' + inRelated.artists[i].id + '/top-tracks?country=US';
+                }
+                batch = getFromApiBatch(tracks);
+                batch.on('end', function(inTracks){
+                    artist.related = inRelated.artists;
+                    artist.related.tracks = inTracks;
+                });
             });
             searchRelated.on('error', function(incode){
                 inRes.sendStatus(inCode);
