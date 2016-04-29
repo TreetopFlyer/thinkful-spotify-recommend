@@ -47,43 +47,41 @@ var getFromApiBatch = function(inURLs){
     return emitter;
 };
 
-urls = [];
-urls.push("artists/6DCIj8jNaNpBz8e5oKFPtp/top-tracks?country=US");
-urls.push("artists/7lzordPuZEXxwt9aoVZYmG/top-tracks?country=US");
-urls.push("artists/0f3EsoviYnRKTkmayI3cux/top-tracks?country=US");
-urls.push("artists/1dfeR4HaWDbWqFHLkxsg1d/top-tracks?country=US");
-urls.push("artists/0WwSkZ7LtFUFjGjMZBMt6T/top-tracks?country=US");
-var batch = getFromApiBatch(urls);
-batch.on('end', function(inArray){
-    console.log(inArray);
-})
+
 
 var app = express();
-
 app.use('/', express.static(__dirname+'/public'));
-
 app.get('/search/:name', function(inReq, inRes){
     var searchArtist, searchRelated, searchTracks;
     var artist;
     
     searchArtist = getFromApi('search', {q:inReq.params.name, limit:1, type:'artist'});
     searchArtist.on('end', function(inData){
+        
         if(inData.artists.items.length > 0){
+            
+            //artist
             artist = inData.artists.items[0];
+            
             searchRelated = getFromApi('artists/' + artist.id + '/related-artists');
             searchRelated.on('end', function(inRelated){
                 var i;
                 var tracks;
                 var batch;
-
+                
+                //related artists
+                artist.related = inRelated.artists;
+                
                 tracks = [];
-                for(i=0; i<inRelated.artists.length; i++){
-                    tracks[i] = 'artists/' + inRelated.artists[i].id + '/top-tracks?country=US';
+                for(i=0; i<artist.related.length; i++){
+                    tracks[i] = 'artists/' + artist.related[i].id + '/top-tracks?country=US';
                 }
                 batch = getFromApiBatch(tracks);
                 batch.on('end', function(inTracks){
-                    artist.related = inRelated.artists;
-                    artist.related.tracks = inTracks;
+                    for(i=0; i<artist.related.length; i++){
+                        artist.related[i].tracks = inTracks[i].tracks;
+                    }
+                    inRes.json(artist);
                 });
             });
             searchRelated.on('error', function(incode){
@@ -98,7 +96,5 @@ app.get('/search/:name', function(inReq, inRes){
         inRes.sendStatus(inCode);
     });
 });
-
-
 
 app.listen(80);
